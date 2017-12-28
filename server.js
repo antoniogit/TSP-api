@@ -21,7 +21,6 @@ var router = express.Router();              // get an instance of the express Ro
 
 // test route to make sure everything is working (accessed at GET http://localhost:8080/api)
 router.get('/', function(req, res) {
-    // res.json({ message: 'Welcome to the api, motherfuckeeeeer!' });
 
     var coord = [
         {
@@ -821,6 +820,13 @@ router.get('/', function(req, res) {
 
             hc: function() {
 
+            // asign drivers random starting points on a circle
+            var circleStartingPoints = newOnCircleStartingPoints();
+            
+            for(var i=0; i<circleStartingPoints.length; i++) {
+               coord.splice(1, 0, circleStartingPoints[i]);
+            }
+
               visited.length = 0;
               optimisedTSP.setVisited();
               optimisedTSP.setDriversHomePoints();
@@ -1286,12 +1292,7 @@ router.get('/', function(req, res) {
 
         findDupliacates();
         clusterCenter = getClusterCenter();
-        // asign drivers random starting points on a circle
-        var circleStartingPoints = newOnCircleStartingPoints();
         
-        for(var i=0; i<circleStartingPoints.length; i++) {
-           coord.splice(1, 0, circleStartingPoints[i]);
-        }
 
         nNodes = coord.length;
         inititlizeCostMatrix();
