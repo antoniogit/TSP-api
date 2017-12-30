@@ -1618,7 +1618,7 @@ router.get('/v1', function(req, res) {
             }
 
             res.json({ 
-               message: driversPaths;
+               message: driversPaths,
                coordinates: coord
             });
     })();
