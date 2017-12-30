@@ -728,11 +728,11 @@ var globalshortestTrip;
 function inititlizeCostMatrix() {
 
     populateMatrix();
-    console.log(matrix);
+    // console.log(matrix);
     populteTimeMatrix();
-    console.log(timeCosts);
+    // console.log(timeCosts);
     createClosetShopMatrix();
-    console.log(shortestTrip);
+    // console.log(shortestTrip);
 
     //populate matrix with the distance costs between every shop
     function populateMatrix() {
@@ -767,7 +767,7 @@ function inititlizeCostMatrix() {
                 }
             }
             costOBj = costOBj.sort(compare);
-            console.log(costOBj);
+            // console.log(costOBj);
 
             // var sortedTimes = timeCosts[i].sort(function(a, b){return a-b});
             var temp = [];
@@ -1106,9 +1106,9 @@ function  globalFitness(numberOfIterations) {
         for(var k=0; k<timeElapsed.length; k++) {
             sumAverage += timeElapsed[k];
         }
-         console.log("The average time is: "+sumAverage/timeElapsed.length)
+         // console.log("The average time is: "+sumAverage/timeElapsed.length)
     } else {
-        console.log("No solution was found for the given data set");
+        // console.log("No solution was found for the given data set");
     }
     return mostEfficientSolution;
 }
@@ -1185,8 +1185,8 @@ function getClusterCenter() {
             "longitude" : long/coord.length,
             "latitude" : lat/coord.length
         };
-        console.log("gravityCenter");
-        console.log(gravityCenter);
+        // console.log("gravityCenter");
+        // console.log(gravityCenter);
         return gravityCenter;
 
 }
@@ -1262,24 +1262,15 @@ return {
                 visited.push(currentLoc);
                 var locationToGo;
 
-                console.log("visited");
-                //console.log(visited);
-
                 while(createOptimalRoute.areThereAnyUnvisitedShopsByTheCurrentDriver(visited, driverPath)) {
                     
-                    //console.log("____Iteration______")
                     locationToGo = createOptimalRoute.findNextClosestLocation(temp[temp.length-1]);
-                    //console.log(locationToGo);
                     temp.push(locationToGo);
                     visited.push(locationToGo);
                 }
                 
                 temp.push(warehouseNode);
-                console.log("temp");
-                console.log(temp);
                 optimalDriversNodes.push(temp);
-                console.log("optimalDriversNodes");
-                console.log(optimalDriversNodes);
             }
 
             return optimalDriversNodes;
@@ -1385,9 +1376,7 @@ var randomAllocateDriversToShops = (function() {
         areAnyMoreUntestedLoc: function() {
 
             for(var i=0; i<testedNodes.length; i++) {
-               // console.log("testedNodes[i] ")
-                //console.log(testedNodes[i])
-                if(testedNodes[i] == 0) {
+               if(testedNodes[i] == 0) {
                   return true;
                 }
               }
@@ -1429,8 +1418,6 @@ var randomAllocateDriversToShops = (function() {
             var thereAreUnivisted = false;
             var  remaining = [];
             remaining.length = 0;
-            //console.log("visited");
-            //console.log(visited);
             
             for (var i=0; i<nNodes; i++) {
                 
@@ -1601,6 +1588,7 @@ router.get('/v1', function(req, res) {
 
             var driversPaths = [];
             for(var i=0; i< driversNodes.length; i++) {
+               console.log(driversNodes[i]);
                 var temp = driversNodes[i];
                 // var pinImage = setPinImage(i); //set the pin colour
                 // var pinShadow = setPinShadow();
@@ -1618,8 +1606,7 @@ router.get('/v1', function(req, res) {
             }
 
             res.json({ 
-               message: driversPaths,
-               coordinates: coord
+               message: driversPaths
             });
     })();
  
