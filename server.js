@@ -19,10 +19,8 @@ var port = process.env.PORT || 8080;        // set our port
 // =============================================================================
 var router = express.Router();              // get an instance of the express Router
 
-// test route to make sure everything is working (accessed at GET http://localhost:8080/api)
-router.get('/', function(req, res) {
 
-    var coord = [
+var coord = [
         {
             "longitude": -0.12575671, //warehouse
             "latitude": 51.54418659 
@@ -713,580 +711,878 @@ router.get('/', function(req, res) {
          }
     ];
 
-    var matrix = [];
-    var timeCosts = [];
-    var shortestTrip = [];
-    var nrOfIterations = 100;
-    var nDrivers = 5;
-    var driverHomes = [1,2,3,4,5]; // in the beginning the driver homes are set as being the warehouse
-    var nNodes = coord.length;
-    var shopPickupTimeIntervals = [];
-    var warehouseNode = 0;
-    var isSolution;
-    var clusterCenter;
-    var globalshortestTrip;
+    
+var matrix = [];
+var timeCosts = [];
+var shortestTrip = [];
+var nrOfIterations = 100;
+var nDrivers = 5;
+var driverHomes = [1,2,3,4,5]; // in the beginning the driver homes are set as being the warehouse
+var nNodes = coord.length;
+var shopPickupTimeIntervals = [];
+var warehouseNode = 0;
+var isSolution;
+var clusterCenter;
+var globalshortestTrip;
 
-    function inititlizeCostMatrix() {
-  
-        populateMatrix();
-        console.log(matrix);
-        populteTimeMatrix();
-        console.log(timeCosts);
-        createClosetShopMatrix();
-        console.log(shortestTrip);
+function inititlizeCostMatrix() {
 
-        //populate matrix with the distance costs between every shop
-        function populateMatrix() {
-            for(var i=0; i<coord.length; i++) {
-                matrix[i] = [];
-                shopPickupTimeIntervals[i] = 16; //set the shops pickup intervals to 16 for all the shops for now
-                for(var j=0; j<coord.length; j++) {
-                    matrix[i][j] =getDistanceFromLatLonInKm(coord[i].latitude, coord[i].longitude, coord[j].latitude, coord[j].longitude);
-                }
+    populateMatrix();
+    console.log(matrix);
+    populteTimeMatrix();
+    console.log(timeCosts);
+    createClosetShopMatrix();
+    console.log(shortestTrip);
+
+    //populate matrix with the distance costs between every shop
+    function populateMatrix() {
+        for(var i=0; i<coord.length; i++) {
+            matrix[i] = [];
+            shopPickupTimeIntervals[i] = 16; //set the shops pickup intervals to 16 for all the shops for now
+            for(var j=0; j<coord.length; j++) {
+                matrix[i][j] =getDistanceFromLatLonInKm(coord[i].latitude, coord[i].longitude, coord[j].latitude, coord[j].longitude);
             }
         }
-
-        //populate the timeCosts matrix with the (estimated by me) cost in time of travelling from one node to another
-        function populteTimeMatrix() {
-            for(var i=0; i<coord.length; i++) {
-                timeCosts[i] = [];
-                for(var j=0; j<coord.length; j++) {
-                    timeCosts[i][j] = 4.711 * matrix[i][j];
-                }
-            }
-        }
-
-        function createClosetShopMatrix() { //shortestTrip[node] = array of closest nodes from the node
-
-            for(var i=0; i<timeCosts.length; i++) {
-                var costOBj = [{}];
-                //costOBj.length = 0;
-                for( var j=0; j<timeCosts[i].length; j++) {
-                    costOBj[j] = {
-                        "position" : j,
-                        "value": timeCosts[i][j]
-                    }
-                }
-                costOBj = costOBj.sort(compare);
-                console.log(costOBj);
-
-                // var sortedTimes = timeCosts[i].sort(function(a, b){return a-b});
-                var temp = [];
-                temp.length = 0;
-                for(var j=0; j<costOBj.length; j++) {
-                   temp[j] = costOBj[j].position;
-                }
-                 shortestTrip.push(temp);
-            }
-
-            function compare(a,b) {
-              if (a.value < b.value)
-                return -1;
-              if (a.value > b.value)
-                return 1;
-              return 0;
-            }
-        }
-
-        //using Haversine formula 
-        function getDistanceFromLatLonInKm(lat1,lon1,lat2,lon2) {
-            var R = 6371; // Radius of the earth in km
-            var dLat = deg2rad(lat2-lat1);  // deg2rad below
-            var dLon = deg2rad(lon2-lon1); 
-            var a = 
-              Math.sin(dLat/2) * Math.sin(dLat/2) +
-              Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
-              Math.sin(dLon/2) * Math.sin(dLon/2)
-              ; 
-            var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
-            var d = R * c; // Distance in km
-            return d;
-        }
-
-        function deg2rad(deg) {
-            return deg * (Math.PI/180)
-        }
-
     }
 
-    var optimisedTSP = (function() {
-
-        var visited = [];
-        var testedNodes = [];
-        var driversNodes = [];
-        isSolution = true;
-
-        return {
-
-            hc: function() {
-
-            // asign drivers random starting points on a circle
-            var circleStartingPoints = newOnCircleStartingPoints();
-            
-            for(var i=0; i<circleStartingPoints.length; i++) {
-               coord.splice(1, 0, circleStartingPoints[i]);
-            }
-
-              visited.length = 0;
-              optimisedTSP.setVisited();
-              optimisedTSP.setDriversHomePoints();
-              testedNodes = visited;
-
-              while(optimisedTSP.areThereAnyUnivistedPlacesLeft()) {
-                optimisedTSP.travel();
-              }
-
-              optimisedTSP.takeDriversToWarehouse();
-              return driversNodes;
-            },
-
-
-            travel: function() {
-                var untestedLoc = optimisedTSP.areAnyMoreUntestedLoc();
-
-
-                if(untestedLoc == false) {
-                    isSolution = false;
-                    return;
-
-                } else {
-                    //var drvr = optimisedTSP.chooseRandomDriver(nDrivers);
-                    //var randomLoc = optimisedTSP.randomUnvisitedLocation();
-                    var drvr = optimisedTSP.chooseLeastTravellingDriver(nDrivers);
-
-                    var currentLocation = driversNodes[drvr][driversNodes[drvr].length-1];
-                    var closestUnivistedLoc = optimisedTSP.closestUnivistedLoc(currentLocation, drvr);
-
-                    if(!optimisedTSP.isValidLocation(drvr,closestUnivistedLoc) && !optimisedTSP.areAnyMoreUntestedLoc()) { //if this driver can't go to the currently tested location, another driver will try to go to a random location
-                        testedNodes = visited;
-                        optimisedTSP.travel();
-                    }
-                    
-                    if(closestUnivistedLoc != -1) { //if the current location is valid and untested, the driver travels there
-                        var temp = [];
-                        temp = driversNodes[drvr];          
-                        temp.push(closestUnivistedLoc);
-                        driversNodes[drvr] = temp;
-                        visited[closestUnivistedLoc] = 1;
-                        testedNodes = visited;
-
-                        //get the closest nodes as well
-                        for(var i=0; i<shortestTrip[closestUnivistedLoc].length; i++)
-                            if(timeCosts[closestUnivistedLoc][shortestTrip[closestUnivistedLoc][i]]<=35 && visited[shortestTrip[closestUnivistedLoc][i]] == 0 ) {
-                                var temp = [];
-                                temp.length = 0;
-                                temp = driversNodes[drvr];          
-                                temp.push(shortestTrip[closestUnivistedLoc][i]);
-                                driversNodes[drvr] = temp;
-                                visited[shortestTrip[closestUnivistedLoc][i]] = 1;
-                                testedNodes = visited;
-                            }
-                    }
-                }
-            },
-
-            takeDriversToWarehouse: function() {
-                for(var drvr=0; drvr< nDrivers; drvr++) { //last driver is already at the Warehouse 
-                    var temp = [];
-                    temp = driversNodes[drvr];
-                    temp.push(warehouseNode);
-                    driversNodes[drvr] = temp;
-                }
-            },
-
-            setVisited: function() {
-                for (var i=0; i<nNodes; i++) {
-                    visited.push(0);
-                }
-            },
-
-            setDriversHomePoints: function() {
-                
-                for (var drvr = 0; drvr < driverHomes.length; drvr++ ) {
-                     
-                    var temp = [];
-                    temp.push(driverHomes[drvr]);
-                    driversNodes[drvr] = temp;
-                    
-                    visited[driverHomes[drvr]] = 1; 
-                }   
-            },
-
-            areThereAnyUnivistedPlacesLeft: function() {
-                
-                for(var i=0; i<visited.length; i++) {
-                    if(visited[i] == 0) {
-                        return true;
-                    }
-                }
-                return false;
-            },
-
-            areAnyMoreUntestedLoc: function() {
-
-                for(var i=0; i<testedNodes.length; i++) {
-                   // console.log("testedNodes[i] ")
-                    //console.log(testedNodes[i])
-                    if(testedNodes[i] == 0) {
-                      return true;
-                    }
-                  }
-                return false;
-            },
-
-            chooseRandomDriver: function(drivers) {
-                
-                var min = 0;
-                var max = drivers;
-
-                min = Math.ceil(min);
-                max = Math.floor(max);
-                return Math.floor(Math.random() * (max - min)) + min;
-            },
-
-            chooseLeastTravellingDriver: function(drivers) {
-
-                var minTime = Number.POSITIVE_INFINITY;
-                var driver = -1; 
-                for(var i=0; i<drivers; i++) {
-                    var spentTime = optimisedTSP.timeElapsedByDriver(i);
-                    if(spentTime < minTime) {
-                        minTime = spentTime;
-                        driver = i;
-                    }
-                }
-                return driver;
-            },
-
-            getRandom: function(array) {
-                var item = array[Math.floor(Math.random()*array.length)];
-                return item;
-            },
-
-            randomUnvisitedLocation: function() {
-                
-                var loc = -1;
-                var thereAreUnivisted = false;
-                var  remaining = [];
-                remaining.length = 0;
-                //console.log("visited");
-                //console.log(visited);
-                
-                for (var i=0; i<nNodes; i++) {
-                    
-                    if( visited[i] == 0 ) {
-                        remaining.push(i); // populate raiming[] with the univisted nodes
-                        thereAreUnivisted = true;
-                    }
-                }
-                
-                if(thereAreUnivisted) {
-                    loc = optimisedTSP.getRandom(remaining);
-                }
-                return loc;
-            },
-
-            closestUnivistedLoc: function(currentLocation, drvr) {
-                var visit = 0;
-                var initial;
-                for(var i=0; i<shortestTrip[currentLocation].length; i++) {
-
-                    if(visited[shortestTrip[currentLocation][i]] != 1 && testedNodes[shortestTrip[currentLocation][i]] != 1) {
-
-                        return shortestTrip[currentLocation][i];
-
-                    }
-                }
-                return -1;
-            },
-
-            timeElapsedByDriver: function( driverId) {
-                var time = 0;
-                for(var i=1; i<driversNodes[driverId].length; i++) {
-                    
-                    time += timeCosts[driversNodes[driverId][i-1]][driversNodes[driverId][i]];
-                }
-                //console.log("driver "+driverId+" time ", time);
-                return time;
-            },
-
-            isValidLocation: function( driverId, PossibleLocation) {
-            
-                // var startTime = 8.00; 
-                // var elapsedTime = optimisedTSP.timeElapsedByDriver(driverId);
-                // var elapsedTimeHours = elapsedTime * 0.016666;
-                // var currentHour = startTime + elapsedTimeHours;
-                var currentDriverLocation = driversNodes[driverId][driversNodes[driverId].length-1];
-                for(var i=0; i<driversNodes.length; i++) {
-                    var otherDriverCurrentLocation = driversNodes[i][driversNodes[i].length-1];
-
-                    if( timeCosts[otherDriverCurrentLocation][PossibleLocation] < timeCosts[currentDriverLocation][PossibleLocation] ) {
-                        return false;
-                    }
-                }
-               
-
-                if(testedNodes[PossibleLocation] == 1 || visited[PossibleLocation] == 0)
-                   // testedNodes[PossibleLocation] = 1;
-                    return false;
-                
-                 return true;
-
-                // if(currentHour +timeCosts[currentLocation][PossibleLocation] + timeCosts[PossibleLocation][0] <= 16.00) {
-                //     testedNodes = visited;
-                //     return true;
-                // } else {
-                //     testedNodes[PossibleLocation] = 1;
-                //     return false;
-                // }
-                
-            },
-
-            fitness: function() {
-
-                var driverTime = 0;
-                var maxTime = 0;
-                var sum = 0;
-
-                for(var i=0; i<driversNodes.length; i++) {
-                    driverTime = optimisedTSP.timeElapsedByDriver(i)+timeCosts[0][driversNodes[i].length];
-                    sum += driverTime;
-                    // if(driverTime > maxTime) {
-                    //     maxTime = driverTime;
-                    // }
-                }
-                return sum/driversNodes.length;
-            },
-        };
-
-    })();
-
-    function timeElapsedByDriver( driverId, driversNodes) {
-        var time = 0;
-        for(var i=1; i<driversNodes[driverId].length; i++) {
-            
-            time += timeCosts[driversNodes[driverId][i-1]][driversNodes[driverId][i]];
-        }
-        //console.log("driver "+driverId+" time ", time);
-        return time;
-    };
-
-    function  globalFitness(numberOfIterations) {   
-        var currentSolution = [];
-        var mostEfficientSolution = [];
-        
-        var currentFitness;
-        var lowestFitness = Number.POSITIVE_INFINITY;
-
-        var timeElapsed = [];
-        timeElapsed.length = 0;
-        
-        
-        for(var i=0; i< numberOfIterations; i++) {
-            
-            currentSolution = optimisedTSP.hc();         
-            currentFitness = optimisedTSP.fitness();
-
-            if(isSolution == true && currentFitness < lowestFitness) {
-                lowestFitness = currentFitness;
-                mostEfficientSolution = currentSolution;
-                globalshortestTrip = shortestTrip; //keeps the shortest distances matrix for the final routing
-                for(var j=0; j<nDrivers; j++) {
-                    timeElapsed[j] = timeElapsedByDriver(j,currentSolution)+timeCosts[0][currentSolution[j].length];
-                }
+    //populate the timeCosts matrix with the (estimated by me) cost in time of travelling from one node to another
+    function populteTimeMatrix() {
+        for(var i=0; i<coord.length; i++) {
+            timeCosts[i] = [];
+            for(var j=0; j<coord.length; j++) {
+                timeCosts[i][j] = 4.711 * matrix[i][j];
             }
         }
-
-        console.log("The most efficient solution is:");
-        if(mostEfficientSolution.length > 0) {
-            console.log(mostEfficientSolution);
-            console.log("The time elasped by drivers is:");
-            console.log(timeElapsed);
-            
-            var sumAverage = 0;
-            for(var k=0; k<timeElapsed.length; k++) {
-                sumAverage += timeElapsed[k];
-            }
-             console.log("The average time is: "+sumAverage/timeElapsed.length)
-        } else {
-            console.log("No solution was found for the given data set");
-        }
-        return mostEfficientSolution;
     }
 
-    //find nDrivers random points on a circle with the center in the gravity center and a radius of about 20km
-    function newOnCircleStartingPoints() {
-        
-        // x=Cx+(r*cos(d/(180/PI)) // latitude
-        // y=Cy+(r*sin(d/(180/PI))//longitude
-        var startingPoints = [];
-        startingPoints.length = 0;
-        var r = 17000; //meters
-        startingPoints.length = 0;
-        var EARTH_RADIUS = 6378100.0;
+    function createClosetShopMatrix() { //shortestTrip[node] = array of closest nodes from the node
 
-        for(var i=0; i<nDrivers; i++) {
-            var temp = {};
-            var angle = generateRandomAngle();
-            temp = {
-                "latitude" : ((clusterCenter.latitude * Math.PI / 180.0) + (r/EARTH_RADIUS) * Math.sin(angle))* 180.0 / Math.PI,
-                "longitude" :  ((clusterCenter.longitude * Math.PI / 180.0) + (r/EARTH_RADIUS) * Math.cos(angle)/Math.cos(clusterCenter.latitude * Math.PI / 180.0))* 180.0 / Math.PI
-            }
-            startingPoints.push(temp);
-        } 
-        
-        return startingPoints;
-        // X = Cx + (r * cosine(angle))  
-        // Y = Cy + (r * sine(angle))
-    } 
-
-    function generateRandomAngle() {
-        var min = 0;
-        var max = 359;
-        return Math.random() * (max - min) + min;
-    }
-
-    //find duplicates in coordonates object and remove them
-    function findDupliacates() {
-
-        var newCoord = [];
-            for( var i=0; i<coord.length; i++) {
-                if(doesNewCoordContainElement(newCoord, coord[i]) == false ) {
-                    newCoord.push({
-                        "longitude": coord[i].longitude,
-                        "latitude": coord[i].latitude
-                    });
+        for(var i=0; i<timeCosts.length; i++) {
+            var costOBj = [{}];
+            //costOBj.length = 0;
+            for( var j=0; j<timeCosts[i].length; j++) {
+                costOBj[j] = {
+                    "position" : j,
+                    "value": timeCosts[i][j]
                 }
             }
-        coord = newCoord;
-        nNodes = coord.length;
-    }
+            costOBj = costOBj.sort(compare);
+            console.log(costOBj);
 
-    // helps find if the newly populated coordonates object has been populated
-    function doesNewCoordContainElement(newCoord, element) {
-        for(var i =0; i <newCoord.length; i++) {
-            if(newCoord[i].latitude == element.latitude && newCoord[i].longitude == element.longitude ) {
-                return true;
+            // var sortedTimes = timeCosts[i].sort(function(a, b){return a-b});
+            var temp = [];
+            temp.length = 0;
+            for(var j=0; j<costOBj.length; j++) {
+               temp[j] = costOBj[j].position;
             }
+             shortestTrip.push(temp);
         }
-        return false;
+
+        function compare(a,b) {
+          if (a.value < b.value)
+            return -1;
+          if (a.value > b.value)
+            return 1;
+          return 0;
+        }
     }
 
-    //calculate the center of the cluster;
-    function getClusterCenter() {
-            var gravityCenter = {};
-            var long = 0;
-            var lat = 0;
-            for(var i=0; i< coord.length; i++) {
-                long += coord[i].longitude;
-                lat += coord[i].latitude;
-            }
-
-            gravityCenter = {
-                "longitude" : long/coord.length,
-                "latitude" : lat/coord.length
-            };
-            console.log("gravityCenter");
-            console.log(gravityCenter);
-            return gravityCenter;
-
+    //using Haversine formula 
+    function getDistanceFromLatLonInKm(lat1,lon1,lat2,lon2) {
+        var R = 6371; // Radius of the earth in km
+        var dLat = deg2rad(lat2-lat1);  // deg2rad below
+        var dLon = deg2rad(lon2-lon1); 
+        var a = 
+          Math.sin(dLat/2) * Math.sin(dLat/2) +
+          Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
+          Math.sin(dLon/2) * Math.sin(dLon/2)
+          ; 
+        var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+        var d = R * c; // Distance in km
+        return d;
     }
 
-    var createOptimalRoute = (function(driversNodes) {
+    function deg2rad(deg) {
+        return deg * (Math.PI/180)
+    }
+
+}
+
+var optimisedTSP = (function() {
 
     var visited = [];
-    var driverPath = [];
+    var testedNodes = [];
+    var driversNodes = [];
+    isSolution = true;
 
-    return { 
+    return {
 
-        areThereAnyUnvisitedShopsByTheCurrentDriver: function(visited, driverPath) {
+        hc: function() {
 
-            if(visited.length < driverPath.length-1) {
-                return true;
+        // asign drivers random starting points on a circle
+        var circleStartingPoints = newOnCircleStartingPoints();
+        
+        for(var i=0; i<circleStartingPoints.length; i++) {
+           coord.splice(1, 0, circleStartingPoints[i]);
+        }
+
+          visited.length = 0;
+          optimisedTSP.setVisited();
+          optimisedTSP.setDriversHomePoints();
+          testedNodes = visited;
+
+          while(optimisedTSP.areThereAnyUnivistedPlacesLeft()) {
+            optimisedTSP.travel();
+          }
+
+          optimisedTSP.takeDriversToWarehouse();
+          return driversNodes;
+        },
+
+
+        travel: function() {
+            var untestedLoc = optimisedTSP.areAnyMoreUntestedLoc();
+
+
+            if(untestedLoc == false) {
+                isSolution = false;
+                return;
+
+            } else {
+                //var drvr = optimisedTSP.chooseRandomDriver(nDrivers);
+                //var randomLoc = optimisedTSP.randomUnvisitedLocation();
+                var drvr = optimisedTSP.chooseLeastTravellingDriver(nDrivers);
+
+                var currentLocation = driversNodes[drvr][driversNodes[drvr].length-1];
+                var closestUnivistedLoc = optimisedTSP.closestUnivistedLoc(currentLocation, drvr);
+
+                if(!optimisedTSP.isValidLocation(drvr,closestUnivistedLoc) && !optimisedTSP.areAnyMoreUntestedLoc()) { //if this driver can't go to the currently tested location, another driver will try to go to a random location
+                    testedNodes = visited;
+                    optimisedTSP.travel();
+                }
+                
+                if(closestUnivistedLoc != -1) { //if the current location is valid and untested, the driver travels there
+                    var temp = [];
+                    temp = driversNodes[drvr];          
+                    temp.push(closestUnivistedLoc);
+                    driversNodes[drvr] = temp;
+                    visited[closestUnivistedLoc] = 1;
+                    testedNodes = visited;
+
+                    //get the closest nodes as well
+                    for(var i=0; i<shortestTrip[closestUnivistedLoc].length; i++)
+                        if(timeCosts[closestUnivistedLoc][shortestTrip[closestUnivistedLoc][i]]<=35 && visited[shortestTrip[closestUnivistedLoc][i]] == 0 ) {
+                            var temp = [];
+                            temp.length = 0;
+                            temp = driversNodes[drvr];          
+                            temp.push(shortestTrip[closestUnivistedLoc][i]);
+                            driversNodes[drvr] = temp;
+                            visited[shortestTrip[closestUnivistedLoc][i]] = 1;
+                            testedNodes = visited;
+                        }
+                }
+            }
+        },
+
+        takeDriversToWarehouse: function() {
+            for(var drvr=0; drvr< nDrivers; drvr++) { //last driver is already at the Warehouse 
+                var temp = [];
+                temp = driversNodes[drvr];
+                temp.push(warehouseNode);
+                driversNodes[drvr] = temp;
+            }
+        },
+
+        setVisited: function() {
+            for (var i=0; i<nNodes; i++) {
+                visited.push(0);
+            }
+        },
+
+        setDriversHomePoints: function() {
+            
+            for (var drvr = 0; drvr < driverHomes.length; drvr++ ) {
+                 
+                var temp = [];
+                temp.push(driverHomes[drvr]);
+                driversNodes[drvr] = temp;
+                
+                visited[driverHomes[drvr]] = 1; 
+            }   
+        },
+
+        areThereAnyUnivistedPlacesLeft: function() {
+            
+            for(var i=0; i<visited.length; i++) {
+                if(visited[i] == 0) {
+                    return true;
+                }
             }
             return false;
         },
 
-        findNextClosestLocation: function(currentLoc) {
+        areAnyMoreUntestedLoc: function() {
 
-            var bestJ = "test";
-            var bestPosition = Number.POSITIVE_INFINITY;
-            //  console.log("Currently tested "+currentLoc);
-            // console.log();
-                //for (var i=0; i<globalshortestTrip[currentLoc].length; i++) {
-                    var smallestIndex = Number.POSITIVE_INFINITY;
-                    var closestShopToCurrentPosition;
-
-                    for(var j=1; j<driverPath.length; j++) {
-
-                        // console.log( "index " + globalshortestTrip[currentLoc].indexOf( driverPath[j] ) + " value OF globalshortestTrip " + driverPath[j] + " value of driverPath " +  globalshortestTrip[currentLoc][ globalshortestTrip[currentLoc].indexOf(driverPath[j])]);
-                        //! && globalshortestTrip[currentLoc].indexOf(driverPath[j]) < bestIndex
-
-                        var isVisited =  visited.indexOf( globalshortestTrip[currentLoc][ globalshortestTrip[currentLoc].indexOf(driverPath[j])]);
-                        var indexOfTestedNode = globalshortestTrip[currentLoc].indexOf( driverPath[j] );
-                        
-                        if( isVisited == -1  && indexOfTestedNode < smallestIndex) {  //&& globalshortestTrip[currentLoc].indexOf( driverPath[j] )) {
-                            closestShopToCurrentPosition = driverPath[j];            //globalshortestTrip[currentLoc][ globalshortestTrip[currentLoc].indexOf(driverPath[j])];
-                            smallestIndex = indexOfTestedNode;
-                        }
-                    }
-                    return  closestShopToCurrentPosition;
-
+            for(var i=0; i<testedNodes.length; i++) {
+               // console.log("testedNodes[i] ")
+                //console.log(testedNodes[i])
+                if(testedNodes[i] == 0) {
+                  return true;
+                }
+              }
+            return false;
         },
 
-        mainOptimal: function(driversNodes) {
+        chooseRandomDriver: function(drivers) {
+            
+            var min = 0;
+            var max = drivers;
 
+            min = Math.ceil(min);
+            max = Math.floor(max);
+            return Math.floor(Math.random() * (max - min)) + min;
+        },
+
+        chooseLeastTravellingDriver: function(drivers) {
+
+            var minTime = Number.POSITIVE_INFINITY;
+            var driver = -1; 
+            for(var i=0; i<drivers; i++) {
+                var spentTime = optimisedTSP.timeElapsedByDriver(i);
+                if(spentTime < minTime) {
+                    minTime = spentTime;
+                    driver = i;
+                }
+            }
+            return driver;
+        },
+
+        getRandom: function(array) {
+            var item = array[Math.floor(Math.random()*array.length)];
+            return item;
+        },
+
+        randomUnvisitedLocation: function() {
+            
+            var loc = -1;
+            var thereAreUnivisted = false;
+            var  remaining = [];
+            remaining.length = 0;
+            //console.log("visited");
+            //console.log(visited);
+            
+            for (var i=0; i<nNodes; i++) {
+                
+                if( visited[i] == 0 ) {
+                    remaining.push(i); // populate raiming[] with the univisted nodes
+                    thereAreUnivisted = true;
+                }
+            }
+            
+            if(thereAreUnivisted) {
+                loc = optimisedTSP.getRandom(remaining);
+            }
+            return loc;
+        },
+
+        closestUnivistedLoc: function(currentLocation, drvr) {
+            var visit = 0;
+            var initial;
+            for(var i=0; i<shortestTrip[currentLocation].length; i++) {
+
+                if(visited[shortestTrip[currentLocation][i]] != 1 && testedNodes[shortestTrip[currentLocation][i]] != 1) {
+
+                    return shortestTrip[currentLocation][i];
+
+                }
+            }
+            return -1;
+        },
+
+        timeElapsedByDriver: function( driverId) {
+            var time = 0;
+            for(var i=1; i<driversNodes[driverId].length; i++) {
+                
+                time += timeCosts[driversNodes[driverId][i-1]][driversNodes[driverId][i]];
+            }
+            //console.log("driver "+driverId+" time ", time);
+            return time;
+        },
+
+        isValidLocation: function( driverId, PossibleLocation) {
+        
+            // var startTime = 8.00; 
+            // var elapsedTime = optimisedTSP.timeElapsedByDriver(driverId);
+            // var elapsedTimeHours = elapsedTime * 0.016666;
+            // var currentHour = startTime + elapsedTimeHours;
+            var currentDriverLocation = driversNodes[driverId][driversNodes[driverId].length-1];
+            for(var i=0; i<driversNodes.length; i++) {
+                var otherDriverCurrentLocation = driversNodes[i][driversNodes[i].length-1];
+
+                if( timeCosts[otherDriverCurrentLocation][PossibleLocation] < timeCosts[currentDriverLocation][PossibleLocation] ) {
+                    return false;
+                }
+            }
+           
+
+            if(testedNodes[PossibleLocation] == 1 || visited[PossibleLocation] == 0)
+               // testedNodes[PossibleLocation] = 1;
+                return false;
+            
+             return true;
+
+            // if(currentHour +timeCosts[currentLocation][PossibleLocation] + timeCosts[PossibleLocation][0] <= 16.00) {
+            //     testedNodes = visited;
+            //     return true;
+            // } else {
+            //     testedNodes[PossibleLocation] = 1;
+            //     return false;
+            // }
+            
+        },
+
+        fitness: function() {
+
+            var driverTime = 0;
+            var maxTime = 0;
+            var sum = 0;
+
+            for(var i=0; i<driversNodes.length; i++) {
+                driverTime = optimisedTSP.timeElapsedByDriver(i)+timeCosts[0][driversNodes[i].length];
+                sum += driverTime;
+                // if(driverTime > maxTime) {
+                //     maxTime = driverTime;
+                // }
+            }
+            return sum/driversNodes.length;
+        },
+    };
+
+})();
+
+function timeElapsedByDriver( driverId, driversNodes) {
+    var time = 0;
+    for(var i=1; i<driversNodes[driverId].length; i++) {
+        
+        time += timeCosts[driversNodes[driverId][i-1]][driversNodes[driverId][i]];
+    }
+    //console.log("driver "+driverId+" time ", time);
+    return time;
+};
+
+function  globalFitness(numberOfIterations) {   
+    var currentSolution = [];
+    var mostEfficientSolution = [];
     
-            var temp = [];
-            var optimalDriversNodes = [];
-            //optimalDriversNodes.length = 0;
+    var currentFitness;
+    var lowestFitness = Number.POSITIVE_INFINITY;
 
-                for(var drvr=0; drvr<driversNodes.length; drvr++) {
+    var timeElapsed = [];
+    timeElapsed.length = 0;
+    
+    
+    for(var i=0; i< numberOfIterations; i++) {
+        
+        currentSolution = optimisedTSP.hc();         
+        currentFitness = optimisedTSP.fitness();
 
-                    visited.length = 0;
-                    temp = [];
-                    driverPath.length = 0;
+        if(isSolution == true && currentFitness < lowestFitness) {
+            lowestFitness = currentFitness;
+            mostEfficientSolution = currentSolution;
+            globalshortestTrip = shortestTrip; //keeps the shortest distances matrix for the final routing
+            for(var j=0; j<nDrivers; j++) {
+                timeElapsed[j] = timeElapsedByDriver(j,currentSolution)+timeCosts[0][currentSolution[j].length];
+            }
+        }
+    }
 
-                    for(var drvrLoc=0; drvrLoc<driversNodes[drvr].length; drvrLoc ++) {//add the driver path to an array to be sorted;
-                        if(drvrLoc != driversNodes[drvr].length - 1) {//ignore the warehouse
-                            driverPath.push(driversNodes[drvr][drvrLoc]);
-                        }
-                    }
+    console.log("The most efficient solution is:");
+    if(mostEfficientSolution.length > 0) {
+        console.log(mostEfficientSolution);
+        console.log("The time elasped by drivers is:");
+        console.log(timeElapsed);
+        
+        var sumAverage = 0;
+        for(var k=0; k<timeElapsed.length; k++) {
+            sumAverage += timeElapsed[k];
+        }
+         console.log("The average time is: "+sumAverage/timeElapsed.length)
+    } else {
+        console.log("No solution was found for the given data set");
+    }
+    return mostEfficientSolution;
+}
 
-                    // console.log("driverPath");
-                    // console.log(driverPath)
+//find nDrivers random points on a circle with the center in the gravity center and a radius of about 20km
+function newOnCircleStartingPoints() {
+    
+    // x=Cx+(r*cos(d/(180/PI)) // latitude
+    // y=Cy+(r*sin(d/(180/PI))//longitude
+    var startingPoints = [];
+    startingPoints.length = 0;
+    var r = 17000; //meters
+    startingPoints.length = 0;
+    var EARTH_RADIUS = 6378100.0;
+
+    for(var i=0; i<nDrivers; i++) {
+        var temp = {};
+        var angle = generateRandomAngle();
+        temp = {
+            "latitude" : ((clusterCenter.latitude * Math.PI / 180.0) + (r/EARTH_RADIUS) * Math.sin(angle))* 180.0 / Math.PI,
+            "longitude" :  ((clusterCenter.longitude * Math.PI / 180.0) + (r/EARTH_RADIUS) * Math.cos(angle)/Math.cos(clusterCenter.latitude * Math.PI / 180.0))* 180.0 / Math.PI
+        }
+        startingPoints.push(temp);
+    } 
+    
+    return startingPoints;
+    // X = Cx + (r * cosine(angle))  
+    // Y = Cy + (r * sine(angle))
+} 
+
+function generateRandomAngle() {
+    var min = 0;
+    var max = 359;
+    return Math.random() * (max - min) + min;
+}
+
+//find duplicates in coordonates object and remove them
+function findDupliacates() {
+
+    var newCoord = [];
+        for( var i=0; i<coord.length; i++) {
+            if(doesNewCoordContainElement(newCoord, coord[i]) == false ) {
+                newCoord.push({
+                    "longitude": coord[i].longitude,
+                    "latitude": coord[i].latitude
+                });
+            }
+        }
+    coord = newCoord;
+    nNodes = coord.length;
+}
+
+// helps find if the newly populated coordonates object has been populated
+function doesNewCoordContainElement(newCoord, element) {
+    for(var i =0; i <newCoord.length; i++) {
+        if(newCoord[i].latitude == element.latitude && newCoord[i].longitude == element.longitude ) {
+            return true;
+        }
+    }
+    return false;
+}
+
+//calculate the center of the cluster;
+function getClusterCenter() {
+        var gravityCenter = {};
+        var long = 0;
+        var lat = 0;
+        for(var i=0; i< coord.length; i++) {
+            long += coord[i].longitude;
+            lat += coord[i].latitude;
+        }
+
+        gravityCenter = {
+            "longitude" : long/coord.length,
+            "latitude" : lat/coord.length
+        };
+        console.log("gravityCenter");
+        console.log(gravityCenter);
+        return gravityCenter;
+
+}
+
+var createOptimalRoute = (function(driversNodes) {
+
+var visited = [];
+var driverPath = [];
+
+return { 
+
+    areThereAnyUnvisitedShopsByTheCurrentDriver: function(visited, driverPath) {
+
+        if(visited.length < driverPath.length-1) {
+            return true;
+        }
+        return false;
+    },
+
+    findNextClosestLocation: function(currentLoc) {
+
+        var bestJ = "test";
+        var bestPosition = Number.POSITIVE_INFINITY;
+        //  console.log("Currently tested "+currentLoc);
+        // console.log();
+            //for (var i=0; i<globalshortestTrip[currentLoc].length; i++) {
+                var smallestIndex = Number.POSITIVE_INFINITY;
+                var closestShopToCurrentPosition;
+
+                for(var j=1; j<driverPath.length; j++) {
+
+                    // console.log( "index " + globalshortestTrip[currentLoc].indexOf( driverPath[j] ) + " value OF globalshortestTrip " + driverPath[j] + " value of driverPath " +  globalshortestTrip[currentLoc][ globalshortestTrip[currentLoc].indexOf(driverPath[j])]);
+                    //! && globalshortestTrip[currentLoc].indexOf(driverPath[j]) < bestIndex
+
+                    var isVisited =  visited.indexOf( globalshortestTrip[currentLoc][ globalshortestTrip[currentLoc].indexOf(driverPath[j])]);
+                    var indexOfTestedNode = globalshortestTrip[currentLoc].indexOf( driverPath[j] );
                     
-                    var currentLoc = driverPath[0];
-                    // console.log( optimalDriversNodes[drvr]);
-
-                    temp.push(currentLoc);
-                    visited.push(currentLoc);
-                    var locationToGo;
-
-                    console.log("visited");
-                    //console.log(visited);
-
-                    while(createOptimalRoute.areThereAnyUnvisitedShopsByTheCurrentDriver(visited, driverPath)) {
-                        
-                        //console.log("____Iteration______")
-                        locationToGo = createOptimalRoute.findNextClosestLocation(temp[temp.length-1]);
-                        //console.log(locationToGo);
-                        temp.push(locationToGo);
-                        visited.push(locationToGo);
+                    if( isVisited == -1  && indexOfTestedNode < smallestIndex) {  //&& globalshortestTrip[currentLoc].indexOf( driverPath[j] )) {
+                        closestShopToCurrentPosition = driverPath[j];            //globalshortestTrip[currentLoc][ globalshortestTrip[currentLoc].indexOf(driverPath[j])];
+                        smallestIndex = indexOfTestedNode;
                     }
-                    
-                    temp.push(warehouseNode);
-                    console.log("temp");
-                    console.log(temp);
-                    optimalDriversNodes.push(temp);
-                    console.log("optimalDriversNodes");
-                    console.log(optimalDriversNodes);
+                }
+                return  closestShopToCurrentPosition;
+
+    },
+
+    mainOptimal: function(driversNodes) {
+
+
+        var temp = [];
+        var optimalDriversNodes = [];
+        //optimalDriversNodes.length = 0;
+
+            for(var drvr=0; drvr<driversNodes.length; drvr++) {
+
+                visited.length = 0;
+                temp = [];
+                driverPath.length = 0;
+
+                for(var drvrLoc=0; drvrLoc<driversNodes[drvr].length; drvrLoc ++) {//add the driver path to an array to be sorted;
+                    if(drvrLoc != driversNodes[drvr].length - 1) {//ignore the warehouse
+                        driverPath.push(driversNodes[drvr][drvrLoc]);
+                    }
                 }
 
-                return optimalDriversNodes;
+                // console.log("driverPath");
+                // console.log(driverPath)
+                
+                var currentLoc = driverPath[0];
+                // console.log( optimalDriversNodes[drvr]);
+
+                temp.push(currentLoc);
+                visited.push(currentLoc);
+                var locationToGo;
+
+                console.log("visited");
+                //console.log(visited);
+
+                while(createOptimalRoute.areThereAnyUnvisitedShopsByTheCurrentDriver(visited, driverPath)) {
+                    
+                    //console.log("____Iteration______")
+                    locationToGo = createOptimalRoute.findNextClosestLocation(temp[temp.length-1]);
+                    //console.log(locationToGo);
+                    temp.push(locationToGo);
+                    visited.push(locationToGo);
+                }
+                
+                temp.push(warehouseNode);
+                console.log("temp");
+                console.log(temp);
+                optimalDriversNodes.push(temp);
+                console.log("optimalDriversNodes");
+                console.log(optimalDriversNodes);
             }
-        } 
-    })();
+
+            return optimalDriversNodes;
+        }
+    } 
+})();
+
+var randomAllocateDriversToShops = (function() {
+
+    var visited = [];
+    var testedNodes = [];
+    var driversNodes = [];
+    isSolution = true;
+
+    return {
+
+        initialize: function() {
+
+        // asign drivers random starting points on a circle
+        var circleStartingPoints = newOnCircleStartingPoints();
+        
+        for(var i=0; i<circleStartingPoints.length; i++) {
+           coord.splice(1, 0, circleStartingPoints[i]);
+        }
+
+          visited.length = 0;
+          randomAllocateDriversToShops.setVisited();
+          randomAllocateDriversToShops.setDriversHomePoints();
+          testedNodes = visited;
+
+          while(randomAllocateDriversToShops.areThereAnyUnivistedPlacesLeft()) {
+            randomAllocateDriversToShops.travel();
+          }
+
+          randomAllocateDriversToShops.takeDriversToWarehouse();
+          return driversNodes;
+        },
+
+
+        travel: function() {
+            var untestedLoc = randomAllocateDriversToShops.areAnyMoreUntestedLoc();
+
+
+            if(untestedLoc == false) {
+                isSolution = false;
+                return;
+
+            } else {
+                //var drvr = randomAllocateDriversToShops.chooseRandomDriver(nDrivers);
+                // var randomLoc = randomAllocateDriversToShops.randomUnvisitedLocation();
+                var drvr = randomAllocateDriversToShops.chooseLeastTravellingDriver(nDrivers);
+
+                var currentLocation = driversNodes[drvr][driversNodes[drvr].length-1];
+
+                var randomLoc = randomAllocateDriversToShops.randomUnvisitedLocation(currentLocation);
+                
+                var temp = [];
+                temp = driversNodes[drvr];          
+                temp.push(randomLoc);
+                driversNodes[drvr] = temp;
+                visited[randomLoc] = 1;
+                testedNodes = visited;
+            }
+        },
+
+        takeDriversToWarehouse: function() {
+            for(var drvr=0; drvr< nDrivers; drvr++) { //last driver is already at the Warehouse 
+                var temp = [];
+                temp = driversNodes[drvr];
+                temp.push(warehouseNode);
+                driversNodes[drvr] = temp;
+            }
+        },
+
+        setVisited: function() {
+            for (var i=0; i<nNodes; i++) {
+                visited.push(0);
+            }
+        },
+
+        setDriversHomePoints: function() {
+            
+            for (var drvr = 0; drvr < driverHomes.length; drvr++ ) {
+                 
+                var temp = [];
+                temp.push(driverHomes[drvr]);
+                driversNodes[drvr] = temp;
+                
+                visited[driverHomes[drvr]] = 1; 
+            }   
+        },
+
+        areThereAnyUnivistedPlacesLeft: function() {
+            
+            for(var i=0; i<visited.length; i++) {
+                if(visited[i] == 0) {
+                    return true;
+                }
+            }
+            return false;
+        },
+
+        areAnyMoreUntestedLoc: function() {
+
+            for(var i=0; i<testedNodes.length; i++) {
+               // console.log("testedNodes[i] ")
+                //console.log(testedNodes[i])
+                if(testedNodes[i] == 0) {
+                  return true;
+                }
+              }
+            return false;
+        },
+
+        chooseRandomDriver: function(drivers) {
+            
+            var min = 0;
+            var max = drivers;
+
+            min = Math.ceil(min);
+            max = Math.floor(max);
+            return Math.floor(Math.random() * (max - min)) + min;
+        },
+
+        chooseLeastTravellingDriver: function(drivers) {
+
+            var minTime = Number.POSITIVE_INFINITY;
+            var driver = -1; 
+            for(var i=0; i<drivers; i++) {
+                var spentTime = randomAllocateDriversToShops.timeElapsedByDriver(i);
+                if(spentTime < minTime) {
+                    minTime = spentTime;
+                    driver = i;
+                }
+            }
+            return driver;
+        },
+
+        getRandom: function(array) {
+            var item = array[Math.floor(Math.random()*array.length)];
+            return item;
+        },
+
+        randomUnvisitedLocation: function(currentLocation) {
+            
+            var loc = -1;
+            var thereAreUnivisted = false;
+            var  remaining = [];
+            remaining.length = 0;
+            //console.log("visited");
+            //console.log(visited);
+            
+            for (var i=0; i<nNodes; i++) {
+                
+                if( visited[i] == 0 ) {
+                    remaining.push(i); // populate raiming[] with the univisted nodes
+                    thereAreUnivisted = true;
+                }
+            }
+            
+            if(thereAreUnivisted) {
+                loc = randomAllocateDriversToShops.getRandom(remaining);
+            }
+
+            if (loc != currentLocation) {
+                return loc;
+            } else {
+                this.randomUnvisitedLocation(currentLocation);
+            }
+        },
+
+        closestUnivistedLoc: function(currentLocation, drvr) {
+            var visit = 0;
+            var initial;
+            for(var i=0; i<shortestTrip[currentLocation].length; i++) {
+
+                if(visited[shortestTrip[currentLocation][i]] != 1 && testedNodes[shortestTrip[currentLocation][i]] != 1) {
+
+                    return shortestTrip[currentLocation][i];
+
+                }
+            }
+            return -1;
+        },
+
+        timeElapsedByDriver: function( driverId) {
+            var time = 0;
+            for(var i=1; i<driversNodes[driverId].length; i++) {
+                
+                time += timeCosts[driversNodes[driverId][i-1]][driversNodes[driverId][i]];
+            }
+            //console.log("driver "+driverId+" time ", time);
+            return time;
+        },
+
+        isValidLocation: function( driverId, PossibleLocation) {
+        
+            // var startTime = 8.00; 
+            // var elapsedTime = randomAllocateDriversToShops.timeElapsedByDriver(driverId);
+            // var elapsedTimeHours = elapsedTime * 0.016666;
+            // var currentHour = startTime + elapsedTimeHours;
+            var currentDriverLocation = driversNodes[driverId][driversNodes[driverId].length-1];
+            for(var i=0; i<driversNodes.length; i++) {
+                var otherDriverCurrentLocation = driversNodes[i][driversNodes[i].length-1];
+
+                if( timeCosts[otherDriverCurrentLocation][PossibleLocation] < timeCosts[currentDriverLocation][PossibleLocation] ) {
+                    return false;
+                }
+            }
+           
+
+            if(testedNodes[PossibleLocation] == 1 || visited[PossibleLocation] == 0)
+               // testedNodes[PossibleLocation] = 1;
+                return false;
+            
+             return true;
+
+            // if(currentHour +timeCosts[currentLocation][PossibleLocation] + timeCosts[PossibleLocation][0] <= 16.00) {
+            //     testedNodes = visited;
+            //     return true;
+            // } else {
+            //     testedNodes[PossibleLocation] = 1;
+            //     return false;
+            // }
+            
+        },
+
+        fitness: function() {
+
+            var driverTime = 0;
+            var maxTime = 0;
+            var sum = 0;
+
+            for(var i=0; i<driversNodes.length; i++) {
+                driverTime = randomAllocateDriversToShops.timeElapsedByDriver(i)+timeCosts[0][driversNodes[i].length];
+                sum += driverTime;
+                // if(driverTime > maxTime) {
+                //     maxTime = driverTime;
+                // }
+            }
+            return sum/driversNodes.length;
+        },
+    };
+
+})();
+
+function  globalTSPv2(numberOfIterations) {
+    var currentSolution = [];
+    var mostEfficientSolution = [];
+    
+    var currentFitness;
+    var lowestFitness = Number.POSITIVE_INFINITY;
+
+    var timeElapsed = [];
+    timeElapsed.length = 0;
+    currentSolution = randomAllocateDriversToShops.initialize();
+    currentFitness = randomAllocateDriversToShops.fitness();
+    
+    for(var i=0; i< numberOfIterations; i++) {
+
+    }
+    // for(var i=0; i< numberOfIterations; i++) {
+        
+        
+    //     if(isSolution == true && currentFitness < lowestFitness) {
+    //         lowestFitness = currentFitness;
+    //         mostEfficientSolution = currentSolution;
+    //         globalshortestTrip = shortestTrip; //keeps the shortest distances matrix for the final routing
+    //         for(var j=0; j<nDrivers; j++) {
+    //             timeElapsed[j] = timeElapsedByDriver(j,currentSolution)+timeCosts[0][currentSolution[j].length];
+    //         }
+    //     }
+    // }
+
+    // console.log("The most efficient solution is:");
+    // if(mostEfficientSolution.length > 0) {
+    //     console.log(mostEfficientSolution);
+    //     console.log("The time elasped by drivers is:");
+    //     console.log(timeElapsed);
+        
+    //     var sumAverage = 0;
+    //     for(var k=0; k<timeElapsed.length; k++) {
+    //         sumAverage += timeElapsed[k];
+    //     }
+    //      console.log("The average time is: "+sumAverage/timeElapsed.length)
+    // } else {
+    //     console.log("No solution was found for the given data set");
+    // }
+    return currentSolution;
+}
+
+
+
+
+
+
+
+
+
+
+// test route to make sure everything is working (accessed at GET http://localhost:8080/api)
+router.get('/v1', function(req, res) {
+
 
     var main = (function() {
 
@@ -1303,14 +1599,6 @@ router.get('/', function(req, res) {
         //globalshortestTrip
         driversNodes = createOptimalRoute.mainOptimal(initialDriversNodes);
 
-
-
-            // var map = new google.maps.Map(document.getElementById('map'), {
-            //             zoom: 8,
-            //             center: {lat: 51.528308, lng: -0.3817765}
-            //         });
-
-            // var pinColors = [ "FFA000","009688","673AB7","4CAF50", "9E9E9E"];
             var driversPaths = [];
             for(var i=0; i< driversNodes.length; i++) {
                 var temp = driversNodes[i];
@@ -1329,27 +1617,64 @@ router.get('/', function(req, res) {
                 driversPaths.push(driverObj);
             }
 
-             // var marker = new google.maps.Marker({
-             //                    map: map,
-             //                    position: {lat: clusterCenter.latitude, lng: clusterCenter.longitude}
-             //                  });
-
-        // console.log("circle");
-        // console.log(newOnCircleStartingPoints());
-        // console.log("");
-        // console.log("Alex this is the longitude: "+coord[10].longitude);
-            res.json({ message: driversPaths});
+            res.json({ message: driversPaths,
+                       coord: coord
+            });
     })();
  
 });
+
+router.get('/v2', function(req, res) {
+
+
+    var main = (function() {
+
+        findDupliacates();
+        clusterCenter = getClusterCenter();
+
+        nNodes = coord.length;
+        inititlizeCostMatrix();
+        var initialDriversNodes = [];
+        var driversNodes = [];
+        
+        initialDriversNodes = globalTSPv2(1);
+        //globalshortestTrip
+        // driversNodes = createOptimalRoute.mainOptimal(initialDriversNodes);
+
+        //     var driversPaths = [];
+        //     for(var i=0; i< driversNodes.length; i++) {
+        //         var temp = driversNodes[i];
+        //         // var pinImage = setPinImage(i); //set the pin colour
+        //         // var pinShadow = setPinShadow();
+        //         var driverPath = [];
+
+        //         for (var j=0; j<temp.length; j++) {
+        //             var myLatLng = {lat: coord[temp[j]].latitude, lng: coord[temp[j]].longitude};
+        //             driverPath.push(myLatLng);
+        //         }
+
+        //         var driverObj = {};
+        //         driverObj['driver_id'] = i;
+        //         driverObj['driver_path'] = driverPath;
+        //         driversPaths.push(driverObj);
+        //     }
+
+            res.json({ message: initialDriversNodes});
+    })();
+ 
+});
+
 
 // more routes for our API will happen here
 
 // REGISTER OUR ROUTES -------------------------------
 // all of our routes will be prefixed with /api
 app.use('/api', router);
+// app.use('/api/v2', router);
 
 // START THE SERVER
 // =============================================================================
 app.listen(port);
 console.log('Magic happens on port ' + port);
+
+
