@@ -872,9 +872,9 @@ var optimisedTSP = (function() {
             //     return;
 
             // } else {
-                // var drvr = optimisedTSP.chooseRandomDriver(nDrivers);
+                var drvr = optimisedTSP.chooseRandomDriver(nDrivers);
                 //var randomLoc = optimisedTSP.randomUnvisitedLocation();
-                var drvr = optimisedTSP.chooseLeastTravellingDriver(nDrivers);
+                // var drvr = optimisedTSP.chooseLeastTravellingDriver(nDrivers);
 
                 var currentLocation = driversNodes[drvr][driversNodes[drvr].length-1];
                 var closestUnivistedLoc = optimisedTSP.closestUnivistedLoc(currentLocation, drvr);
