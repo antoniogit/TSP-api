@@ -903,7 +903,7 @@ class optimisedTSP {
                     this.testedNodes = this.visited;
 
                     //get the closest nodes as well
-                    if (isV2) {
+                    if (!isV2) {
                         for(var i=0; i<shortestTrip[closestUnivistedLoc].length; i++)
                             if(timeCosts[closestUnivistedLoc][shortestTrip[closestUnivistedLoc][i]]<=35 && this.visited[shortestTrip[closestUnivistedLoc][i]] == 0 ) {
                                 var temp = [];
@@ -1128,8 +1128,10 @@ class optimisedTSP {
             // console.log(driversNodes[drvr1][initialLocIndexDriver1]);
             // console.log( driversNodes[drvr2][initialLocIndexDriver2]);
             //             console.log("--------")
-            // drvrsNds[drvr1].splice(initialLocIndexDriver1, 1);
-            // drvrsNds[drvr2].splice(initialLocIndexDriver2, 0, location1);
+
+            // driversNodes[drvr1].splice(initialLocIndexDriver1, 1);
+            // driversNodes[drvr2].splice(initialLocIndexDriver2, 0, location1);
+
             // this.driversNodes = drvrsNds;
              //Interchange:
             driversNodes[drvr1][initialLocIndexDriver1] = location2;
@@ -1221,14 +1223,14 @@ function  globalFitness(numberOfIterations, isV2) {
                     currentSolution = optimisedTSP.chooseTSPInterchangebleRoute(mostEfficientSolution);
                     currentFitness = optimisedTSP.fitness(currentSolution);
 
-                    console.log("index: " + i + " lowestFitness: " +lowestFitness+ " currentFitness: " + currentFitness);
+                    // console.log("index: " + i + " lowestFitness: " +lowestFitness+ " currentFitness: " + currentFitness);
 
 
                     if( currentFitness < lowestFitness  ) {
                         // console.log("lowest fitness");
-                        console.log("lowest fitness: " + lowestFitness + "current fitness " + currentFitness);
-                        // console.log("current fitness2");
-                        // console.log(currentFitness);
+                        // console.log("lowest fitness: " + lowestFitness + "current fitness " + currentFitness);
+                        console.log("current fitness2");
+                        console.log(currentFitness);
                         lowestFitness = currentFitness;
                         mostEfficientSolution = currentSolution;
                         // for(var j=0; j<nDrivers; j++) {
@@ -1253,7 +1255,7 @@ function  globalFitness(numberOfIterations, isV2) {
 
                    // console.log("aici");
                    // console.log(currentSolution);
-                    console.log("index: " + i + " currentFitness: " + currentFitness);
+                    // console.log("index: " + i + " lowestFitness: " +lowestFitness+ " currentFitness: " + currentFitness);
 
                     if( currentFitness < lowestFitness) {
                         globalBestFitness = currentFitness;
@@ -1696,9 +1698,10 @@ router.get('/v1', function(req, res) {
 
         // globalshortestTrip = shortestTrip; //keeps the shortest distances matrix for the final routing
 
-        initialDriversNodes = globalFitness(1000, null);
+        initialDriversNodes = globalFitness(10000, null);
         //globalshortestTrip
         driversNodes = createOptimalRoute.mainOptimal(initialDriversNodes);
+        fitness = optimisedTSP.fitness(driversNodes);
 
          var driversPaths = [];
          for(var i=0; i< driversNodes.length; i++) {
@@ -1723,7 +1726,8 @@ router.get('/v1', function(req, res) {
          // console.log(driversPaths);
 
          res.json({ 
-            message: driversPaths
+            message: driversPaths,
+            fitness: fitness
          });
  })();
  
@@ -1750,9 +1754,10 @@ router.get('/v2', function(req, res) {
 
         
 
-        initialDriversNodes = globalFitness(1000, true);
+        initialDriversNodes = globalFitness(10000, true);
         //globalshortestTrip
         driversNodes = createOptimalRoute.mainOptimal(initialDriversNodes);
+        fitness = optimisedTSP.fitness(driversNodes);
 
          var driversPaths = [];
          for(var i=0; i< driversNodes.length; i++) {
@@ -1777,7 +1782,8 @@ router.get('/v2', function(req, res) {
          // console.log(driversPaths);
 
          res.json({ 
-            message: driversPaths
+            message: driversPaths,
+            fitness: fitness
          });
  })();
  
