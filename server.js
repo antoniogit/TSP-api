@@ -1047,8 +1047,10 @@ class optimisedTSP {
             // console.log("timeCosts");
             // console.log(timeCosts)
             for(var i=1; i<driversNodes[driverId].length; i++) {
-                 // console.log("driver");
-                 // console.log(i)
+                 // console.log("driverNode for driver:"+driverId +" with i: "+i);
+                 // console.log(driversNodes[driverId][i-1]);
+                 // console.log(driversNodes[driverId]);
+                 // console.log(driversNodes[driverId].length);
                 
                 time += timeCosts[driversNodes[driverId][i-1]][driversNodes[driverId][i]];
             }
@@ -1122,6 +1124,32 @@ class optimisedTSP {
             var location1 = driversNodes[drvr1][initialLocIndexDriver1];
             var location2 = driversNodes[drvr2][initialLocIndexDriver2];
 
+            var drvrsNds = driversNodes;
+
+            var arrDriver1 = driversNodes[drvr1];
+            var arrDriver2 = driversNodes[drvr2];
+
+            console.log("----");
+            console.log(location1);
+            console.log(location2);
+            console.log("----");
+
+
+            if (location1 > nDrivers && location2 != 0) {
+                arrDriver1.splice(initialLocIndexDriver1, 1);
+                arrDriver2.splice(initialLocIndexDriver2, 0, location1);
+
+                driversNodes[drvr1] = arrDriver1;
+                driversNodes[drvr2] = arrDriver2;
+
+                 //Interchange:
+                // driversNodes[drvr1][initialLocIndexDriver1] = location2;
+                // driversNodes[drvr2][initialLocIndexDriver2] = location1;
+
+                // console.log('OY');
+                // console.log(driversNodes[drvr1]);
+                // console.log(driversNodes[drvr2]);
+            }
             // drvrsNds = this.driversNodes;
 
             //             console.log("before")
@@ -1129,18 +1157,16 @@ class optimisedTSP {
             // console.log( driversNodes[drvr2][initialLocIndexDriver2]);
             //             console.log("--------")
 
-            // driversNodes[drvr1].splice(initialLocIndexDriver1, 1);
-            // driversNodes[drvr2].splice(initialLocIndexDriver2, 0, location1);
+                
 
             // this.driversNodes = drvrsNds;
-             //Interchange:
-            driversNodes[drvr1][initialLocIndexDriver1] = location2;
-            driversNodes[drvr2][initialLocIndexDriver2] = location1;
+            
 
             //            console.log("after")
             // console.log(driversNodes[drvr1][initialLocIndexDriver1]);
             // console.log( driversNodes[drvr2][initialLocIndexDriver2]);
             //             console.log("--------")
+            // driversNodes = drvrsNds;
 
             return driversNodes;
         }
@@ -1180,7 +1206,7 @@ class optimisedTSP {
 //             return time;
 //         };
 
-function  globalFitness(numberOfIterations, isV2) { 
+function globalFitness(numberOfIterations, isV2) { 
         findDupliacates();
         clusterCenter = getClusterCenter();
         
@@ -1221,9 +1247,10 @@ function  globalFitness(numberOfIterations, isV2) {
 
 
                     currentSolution = optimisedTSP.chooseTSPInterchangebleRoute(mostEfficientSolution);
+                    // console.log(currentSolution);
                     currentFitness = optimisedTSP.fitness(currentSolution);
 
-                    // console.log("index: " + i + " lowestFitness: " +lowestFitness+ " currentFitness: " + currentFitness);
+                    console.log("index: " + i + " lowestFitness: " +lowestFitness+ " currentFitness: " + currentFitness);
 
 
                     if( currentFitness < lowestFitness  ) {
@@ -1754,7 +1781,7 @@ router.get('/v2', function(req, res) {
 
         
 
-        initialDriversNodes = globalFitness(10000, true);
+        initialDriversNodes = globalFitness(1000, true);
         //globalshortestTrip
         driversNodes = createOptimalRoute.mainOptimal(initialDriversNodes);
         fitness = optimisedTSP.fitness(driversNodes);
