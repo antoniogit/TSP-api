@@ -1147,8 +1147,8 @@ class optimisedTSP {
                 // driversNodes[drvr2][initialLocIndexDriver2] = location1;
 
                 // console.log('OY');
-                // console.log(driversNodes[drvr1]);
-                // console.log(driversNodes[drvr2]);
+                console.log(driversNodes[drvr1]);
+                console.log(driversNodes[drvr2]);
             }
             // drvrsNds = this.driversNodes;
 
@@ -1781,7 +1781,7 @@ router.get('/v2', function(req, res) {
 
         
 
-        initialDriversNodes = globalFitness(1000, true);
+        initialDriversNodes = globalFitness(10000, true);
         //globalshortestTrip
         driversNodes = createOptimalRoute.mainOptimal(initialDriversNodes);
         fitness = optimisedTSP.fitness(driversNodes);
