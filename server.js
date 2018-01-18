@@ -757,7 +757,7 @@ function inititlizeCostMatrix() {
     // console.log(timeCosts);
     createClosetShopMatrix();
     // console.log(shortestTrip);
-    console.log("here2");
+    // console.log("here2");
 
 
     //populate matrix with the distance costs between every shop
@@ -1129,10 +1129,10 @@ class optimisedTSP {
             var arrDriver1 = driversNodes[drvr1];
             var arrDriver2 = driversNodes[drvr2];
 
-            console.log("----");
-            console.log(location1);
-            console.log(location2);
-            console.log("----");
+            // console.log("----");
+            // console.log(location1);
+            // console.log(location2);
+            // console.log("----");
 
 
             if (location1 > nDrivers && location2 != 0) {
@@ -1147,8 +1147,8 @@ class optimisedTSP {
                 // driversNodes[drvr2][initialLocIndexDriver2] = location1;
 
                 // console.log('OY');
-                console.log(driversNodes[drvr1]);
-                console.log(driversNodes[drvr2]);
+                // console.log(driversNodes[drvr1]);
+                // console.log(driversNodes[drvr2]);
             }
             // drvrsNds = this.driversNodes;
 
@@ -1250,14 +1250,14 @@ function globalFitness(numberOfIterations, isV2) {
                     // console.log(currentSolution);
                     currentFitness = optimisedTSP.fitness(currentSolution);
 
-                    console.log("index: " + i + " lowestFitness: " +lowestFitness+ " currentFitness: " + currentFitness);
+                    // console.log("index: " + i + " lowestFitness: " +lowestFitness+ " currentFitness: " + currentFitness);
 
 
                     if( currentFitness < lowestFitness  ) {
                         // console.log("lowest fitness");
                         // console.log("lowest fitness: " + lowestFitness + "current fitness " + currentFitness);
-                        console.log("current fitness2");
-                        console.log(currentFitness);
+                        // console.log("current fitness2");
+                        // console.log(currentFitness);
                         lowestFitness = currentFitness;
                         mostEfficientSolution = currentSolution;
                         // for(var j=0; j<nDrivers; j++) {
@@ -1297,7 +1297,7 @@ function globalFitness(numberOfIterations, isV2) {
 
                 }
 
-                console.log("The most efficient solution is:");
+                // console.log("The most efficient solution is:");
                 if(mostEfficientSolution.length > 0) {
                     // console.log(mostEfficientSolution);
                     // console.log("The time elasped by drivers is:");
@@ -1307,9 +1307,9 @@ function globalFitness(numberOfIterations, isV2) {
                     for(var k=0; k<timeElapsed.length; k++) {
                         sumAverage += timeElapsed[k];
                     }
-                     console.log("The average time is: "+sumAverage/timeElapsed.length)
+                     // console.log("The average time is: "+sumAverage/timeElapsed.length)
                 } else {
-                    console.log("No solution was found for the given data set");
+                    // console.log("No solution was found for the given data set");
                 }
             }
 
@@ -1725,7 +1725,7 @@ router.get('/v1', function(req, res) {
 
         // globalshortestTrip = shortestTrip; //keeps the shortest distances matrix for the final routing
 
-        initialDriversNodes = globalFitness(10000, null);
+        initialDriversNodes = globalFitness(3000, null);
         //globalshortestTrip
         driversNodes = createOptimalRoute.mainOptimal(initialDriversNodes);
         fitness = optimisedTSP.fitness(driversNodes);
