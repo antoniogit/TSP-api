@@ -1546,7 +1546,69 @@ class createOptimalRoute {
         }
 }
 
+function findQuadrantOfCoordinate(coordinate) {
+    topLeft = {
+        "longitude" : -0.224958,
+        "latitude"  : 51.546865 
+    };
 
+    topMidle = {
+        "longitude" : -0.1597453,
+        "latitude"  : 51.546865
+    };
+
+    topRight = {
+        "longitude" : -0.094477,
+        "latitude"  : 51.546865 
+    };
+
+    middleRight = {
+        "longitude" : -0.094477,
+        "latitude"  : 51.5146565
+    };
+
+
+    bottomRight = {
+        "longitude"  :  -0.094477,
+        "latitude"   :  51.482448
+    };
+
+    bottomMiddle = {
+        "longitude" : -0.1597453,
+        "latitude"  : 51.482448
+    };
+
+    bottomLeft = {
+        "longitude" : -0.224958,
+        "latitude"  : 51.482448
+    };
+
+    middleLeft = {
+        "longitude" : -0.224958,
+        "latitude"  : 51.5146565
+    };
+
+    if (coordinate.latitude >= middleRight.latitude && coordinate.longitude >= middleRight.longitude) {
+        return 0;
+    } else if (coordinate.latitude >= topMidle.latitude && coordinate.longitude >= topMidle.longitude) {
+        return 0;
+    } else if (coordinate.latitude < middleRight.latitude && coordinate.longitude < middleRight.longitude) {
+        return 1;
+    } else if (coordinate.latitude <= bottomMiddle.latitude && coordinate.longitude >= bottomMiddle.longitude) {
+        return 1;
+    } else if (coordinate.latitude < bottomMiddle.latitude && coordinate.longitude < bottomMiddle.longitude) {
+        return 2;
+    } else if (coordinate.latitude <= middleLeft.latitude && coordinate.longitude <= middleLeft.longitude) {
+        return 2;
+    } else if (coordinate.latitude > middleLeft.latitude && coordinate.longitude <= middleLeft.longitude) {
+        return 3;
+    } else if (coordinate.latitude > topMidle.latitude && coordinate.longitude < topMidle.longitude) {
+        return 3;
+    } else {
+        return 4;
+    }
+
+}
 
 
 
@@ -1785,6 +1847,122 @@ router.get('/v2', function(req, res) {
         //globalshortestTrip
         driversNodes = createOptimalRoute.mainOptimal(initialDriversNodes);
         fitness = optimisedTSP.fitness(driversNodes);
+
+         var driversPaths = [];
+         for(var i=0; i< driversNodes.length; i++) {
+            // console.log(driversNodes[i]);
+             var temp = driversNodes[i];
+             // var pinImage = setPinImage(i); //set the pin colour
+             // var pinShadow = setPinShadow();
+             var driverPath = [];
+
+             for (var j=0; j<temp.length; j++) {
+                  var myLatLng;
+                  myLatLng = {lat: coord[temp[j]].latitude, lng: coord[temp[j]].longitude};
+                  driverPath.push(myLatLng);
+             }
+
+             var driverObj = {};
+             driverObj['driver_id'] = i;
+             driverObj['driver_path'] = driverPath;
+             driversPaths.push(driverObj);
+         }
+
+         // console.log(driversPaths);
+
+         res.json({ 
+            message: driversPaths,
+            fitness: fitness
+         });
+ })();
+ 
+});
+
+// test route to make sure everything is working (accessed at GET http://localhost:8080/api)
+router.get('/v3', function(req, res) {
+
+    coord = coordData;
+    matrix = [];
+    timeCosts = [];
+    shortestTrip = [];
+    nrOfIterations = 100;
+    nDrivers = 5;
+    driverHomes = [1,2,3,4,5]; // in the beginning the driver homes are set as being the warehouse
+    nNodes = coord.length;
+    shopPickupTimeIntervals = [];
+    warehouseNode = 0;
+    isSolution;
+    clusterCenter;
+    globalshortestTrip = [];
+
+    var main = (function() {
+
+        findDupliacates();
+        clusterCenter = getClusterCenter();
+        
+         var circleStartingPoints = newOnCircleStartingPoints();
+    
+         for(var i=0; i<circleStartingPoints.length; i++) {
+             coord.splice(1, 0, circleStartingPoints[i]);
+         }
+
+        nNodes = coord.length;
+        inititlizeCostMatrix();
+        var initialDriversNodes = [];
+        var driversNodes = [];
+
+        globalshortestTrip = shortestTrip; //keeps the shortest distances matrix for the final routing  
+        // currentSolution = [];
+        // mostEfficientSolution = [];
+        
+        lowestFitness = Number.POSITIVE_INFINITY;
+
+        timeElapsed = [];
+        timeElapsed.length = 0;
+        var quadrants = [];
+        quadrants[0] = [];
+        quadrants[1] = [];
+        quadrants[2] = [];
+        quadrants[3] = [];
+        quadrants[4] = [];
+
+
+
+        for( var i=0; i<coord.length; i++) {
+            if (i > 5 ) { //warehouse node will be visited by all drivers and drivers home points are specific to each driver
+                quadrantIndex = findQuadrantOfCoordinate(coord[i]);
+                quadrants[quadrantIndex].push(i);
+            }
+        }
+
+
+
+        // add homePoints
+        for( var i=0; i < nDrivers; i++ ) {
+            initialDriversNodes[i] = [];
+            var temp = [];
+            temp.push(i+1);
+            initialDriversNodes[i]= temp;
+        }
+
+        //add route
+        for( var i=0; i < nDrivers; i++ ) {
+            var temp = [];
+            temp = initialDriversNodes[i];
+            quadrants[i].push(0); //add warehouse
+            for( var j=0; j<quadrants[i].length; j++) {
+                temp.push(quadrants[i][j]);
+            }
+            initialDriversNodes[i]= temp;
+        }
+
+        // initialDriversNodes = globalFitness(10000, true);
+        //globalshortestTrip
+        driversNodes = createOptimalRoute.mainOptimal(initialDriversNodes);
+        // console.log(driversNodes[0]);
+        fitness = optimisedTSP.fitness(driversNodes);
+
+        console.log(fitness);
 
          var driversPaths = [];
          for(var i=0; i< driversNodes.length; i++) {
