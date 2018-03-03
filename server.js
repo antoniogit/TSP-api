@@ -19,7 +19,6 @@ var port = process.env.PORT || 8080;        // set our port
 var router = express.Router();              // get an instance of the express Router
 
 var coordData = [
-var coordData = [
   {
     "longitude": -0.12575671, //warehouse
     "latitude": 51.54418659 
@@ -708,7 +707,6 @@ var coordData = [
     "longitude": -0.1262742,
     "latitude": 51.5442538
  }
-];
 ];
 
 
