@@ -1,1 +1,1 @@
-# TSP-api use heuristic methods to compare different routing algortithms.
+# TSP-api uses uses different heuristic methods(AI) and a baseline system to route a fleet of drivers in London. Each endpoint has the purpose of routing the drivers to all the customers and return to the warehouse as fast as possible. Endpoint V1 is proven to be the most efficient.
