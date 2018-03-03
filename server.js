@@ -847,79 +847,74 @@ class optimisedTSP {
         // this.driversNodes = [];
     }
 
-   
-  // isSolution = true;
+    static hc (isV2) {
+        this.visited = [];
+        this.testedNodes = [];
+        this.driversNodes = [];
+        // isSolution = true;
 
-    
+        this.setVisited();
+        this.setDriversHomePoints();
+        this.testedNodes = this.visited;
 
-        static hc (isV2) {
-            this.visited = [];
-            this.testedNodes = [];
-            this.driversNodes = [];
-            // isSolution = true;
-
-            this.setVisited();
-            this.setDriversHomePoints();
-            this.testedNodes = this.visited;
-
-            while(this.areThereAnyUnivistedPlacesLeft(this.visited)) {
-                this.travel(isV2);
-            }
-
-            optimisedTSP.takeDriversToWarehouse();
-            return this.driversNodes;
+        while(this.areThereAnyUnivistedPlacesLeft(this.visited)) {
+            this.travel(isV2);
         }
 
+        optimisedTSP.takeDriversToWarehouse();
+        return this.driversNodes;
+    }
 
-        static travel(isV2) {
-            // var untestedLoc = optimisedTSP.areAnyMoreUntestedLoc();
+
+    static travel(isV2) {
+        // var untestedLoc = optimisedTSP.areAnyMoreUntestedLoc();
 
 
-            // if(untestedLoc == false) {
-            //     isSolution = false;
-            //     return;
+        // if(untestedLoc == false) {
+        //     isSolution = false;
+        //     return;
 
-            // } else {
-                var drvr = optimisedTSP.chooseRandomDriver(nDrivers);
-                var randomLoc = this.randomUnvisitedLocation();
-                // var drvr = this.chooseLeastTravellingDriver(nDrivers);
+        // } else {
+            var drvr = optimisedTSP.chooseRandomDriver(nDrivers);
+            var randomLoc = this.randomUnvisitedLocation();
+            // var drvr = this.chooseLeastTravellingDriver(nDrivers);
 
-                var currentLocation = this.driversNodes[drvr][this.driversNodes[drvr].length-1];
-                var closestUnivistedLoc = this.closestUnivistedLoc(currentLocation, drvr);
+            var currentLocation = this.driversNodes[drvr][this.driversNodes[drvr].length-1];
+            var closestUnivistedLoc = this.closestUnivistedLoc(currentLocation, drvr);
 
-                // console.log('aici2');
-                // console.log(visited);
-                // if(!optimisedTSP.isValidLocation(drvr,closestUnivistedLoc) && !optimisedTSP.areAnyMoreUntestedLoc()) { //if this driver can't go to the currently tested location, another driver will try to go to a random location
-                //     this.testedNodes = visited;
-                //     optimisedTSP.travel();
-                // }
-                
-                if(closestUnivistedLoc != -1) { //if the current location is valid and untested, the driver travels there
-                    var temp = [];
-                    temp = this.driversNodes[drvr];          
-                    temp.push(closestUnivistedLoc);
-                    this.driversNodes[drvr] = temp;
-                    this.visited[closestUnivistedLoc] = 1;
-                    this.testedNodes = this.visited;
+            // console.log('aici2');
+            // console.log(visited);
+            // if(!optimisedTSP.isValidLocation(drvr,closestUnivistedLoc) && !optimisedTSP.areAnyMoreUntestedLoc()) { //if this driver can't go to the currently tested location, another driver will try to go to a random location
+            //     this.testedNodes = visited;
+            //     optimisedTSP.travel();
+            // }
+            
+            if(closestUnivistedLoc != -1) { //if the current location is valid and untested, the driver travels there
+                var temp = [];
+                temp = this.driversNodes[drvr];          
+                temp.push(closestUnivistedLoc);
+                this.driversNodes[drvr] = temp;
+                this.visited[closestUnivistedLoc] = 1;
+                this.testedNodes = this.visited;
 
-                    //get the closest nodes as well
-                    if (!isV2) {
-                        for(var i=0; i<shortestTrip[closestUnivistedLoc].length; i++)
-                            if(timeCosts[closestUnivistedLoc][shortestTrip[closestUnivistedLoc][i]]<=35 && this.visited[shortestTrip[closestUnivistedLoc][i]] == 0 ) {
-                                var temp = [];
-                                temp.length = 0;
-                                temp = this.driversNodes[drvr];          
-                                temp.push(shortestTrip[closestUnivistedLoc][i]);
-                                this.driversNodes[drvr] = temp;
-                                this.visited[shortestTrip[closestUnivistedLoc][i]] = 1;
-                                this.testedNodes = this.visited;
-                            }
-                    }
-                    isSolution = true;
-                    return isSolution
+                //get the closest nodes as well
+                if (!isV2) {
+                    for(var i=0; i<shortestTrip[closestUnivistedLoc].length; i++)
+                        if(timeCosts[closestUnivistedLoc][shortestTrip[closestUnivistedLoc][i]]<=35 && this.visited[shortestTrip[closestUnivistedLoc][i]] == 0 ) {
+                            var temp = [];
+                            temp.length = 0;
+                            temp = this.driversNodes[drvr];          
+                            temp.push(shortestTrip[closestUnivistedLoc][i]);
+                            this.driversNodes[drvr] = temp;
+                            this.visited[shortestTrip[closestUnivistedLoc][i]] = 1;
+                            this.testedNodes = this.visited;
+                        }
                 }
-             // }
-        }
+                isSolution = true;
+                return isSolution
+            }
+         // }
+    }
 
         static takeDriversToWarehouse() {
             for(var drvr=0; drvr< nDrivers; drvr++) { //last driver is already at the Warehouse 
@@ -1106,6 +1101,17 @@ class optimisedTSP {
                 }
             }
             return maxTime;
+        }
+
+        static getOverallDroveDistance (driversNodes) {
+            var distance = 0;
+
+            for(var i=0; i<driversNodes.length; i++) {
+                for(var j=0; j<driversNodes[i].length - 1; j++)
+                    distance += matrix[driversNodes[i][j]][driversNodes[i][j+1]];
+            }
+
+            return distance;
         }
 
         static chooseTSPInterchangebleRoute (driversNodes) {
@@ -1791,32 +1797,34 @@ router.get('/v1', function(req, res) {
         //globalshortestTrip
         driversNodes = createOptimalRoute.mainOptimal(initialDriversNodes);
         fitness = optimisedTSP.fitness(driversNodes);
+        var distance = optimisedTSP.getOverallDroveDistance(driversNodes);
 
-         var driversPaths = [];
-         for(var i=0; i< driversNodes.length; i++) {
+        var driversPaths = [];
+        for(var i=0; i< driversNodes.length; i++) {
             // console.log(driversNodes[i]);
-             var temp = driversNodes[i];
-             // var pinImage = setPinImage(i); //set the pin colour
-             // var pinShadow = setPinShadow();
-             var driverPath = [];
+            var temp = driversNodes[i];
+            // var pinImage = setPinImage(i); //set the pin colour
+            // var pinShadow = setPinShadow();
+            var driverPath = [];
 
-             for (var j=0; j<temp.length; j++) {
-                  var myLatLng;
-                  myLatLng = {lat: coord[temp[j]].latitude, lng: coord[temp[j]].longitude};
-                  driverPath.push(myLatLng);
-             }
+            for (var j=0; j<temp.length; j++) {
+              var myLatLng;
+              myLatLng = {lat: coord[temp[j]].latitude, lng: coord[temp[j]].longitude};
+              driverPath.push(myLatLng);
+            }
 
-             var driverObj = {};
-             driverObj['driver_id'] = i;
-             driverObj['driver_path'] = driverPath;
-             driversPaths.push(driverObj);
-         }
+            var driverObj = {};
+            driverObj['driver_id'] = i;
+            driverObj['driver_path'] = driverPath;
+            driversPaths.push(driverObj);
+        }
 
          // console.log(driversPaths);
 
          res.json({ 
             message: driversPaths,
-            fitness: fitness
+            fitness: fitness,
+            distance: distance
          });
  })();
  
@@ -1847,6 +1855,7 @@ router.get('/v2', function(req, res) {
         //globalshortestTrip
         driversNodes = createOptimalRoute.mainOptimal(initialDriversNodes);
         fitness = optimisedTSP.fitness(driversNodes);
+        var distance = optimisedTSP.getOverallDroveDistance(driversNodes);
 
          var driversPaths = [];
          for(var i=0; i< driversNodes.length; i++) {
@@ -1872,7 +1881,8 @@ router.get('/v2', function(req, res) {
 
          res.json({ 
             message: driversPaths,
-            fitness: fitness
+            fitness: fitness,
+            distance: distance
          });
  })();
  
@@ -1961,6 +1971,7 @@ router.get('/v3', function(req, res) {
         driversNodes = createOptimalRoute.mainOptimal(initialDriversNodes);
         // console.log(driversNodes[0]);
         fitness = optimisedTSP.fitness(driversNodes);
+        var distance = optimisedTSP.getOverallDroveDistance(driversNodes);
 
         console.log(fitness);
 
@@ -1988,7 +1999,8 @@ router.get('/v3', function(req, res) {
 
          res.json({ 
             message: driversPaths,
-            fitness: fitness
+            fitness: fitness,
+            distance: distance
          });
  })();
  
