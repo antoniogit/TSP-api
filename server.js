@@ -1654,7 +1654,54 @@ router.get('/v3', function(req, res) {
             fitness: fitness,
             distance: distance
          });
- })();
+    })();
+ 
+});
+
+router.get('/generate-dataset', function(req, res) {
+
+    var numberOfStops = 200;
+    var stops = [];
+
+   for (var i = 0; i < numberOfStops; i++) {
+        var coordonates = {};
+
+        coordonates = {
+            "longitude" : generateRandomLongitutdeInLondon(),
+            "latitude" : generateRandomLatitudeInLondon()
+        }
+
+        stops.push(coordonates)
+   }
+
+    var main = (function() {
+
+         res.json({ 
+            stops
+         });
+    })();
+
+    // Confinments:
+    // 51.6700544,-0.4329608,15
+    // 51.3272216,0.1264832
+    
+    function generateRandomLongitutdeInLondon() {
+        var min = -0.4329608;
+        var max = 0.1264832;
+
+        longitude = Math.random() * (max - min) + min;
+
+        return longitude;
+    }
+
+    function generateRandomLatitudeInLondon() {
+        var min = 51.3272216;
+        var max = 51.6700544;
+
+        latitude = Math.random() * (max - min) + min;
+
+        return latitude;
+    }
  
 });
 
