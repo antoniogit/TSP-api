@@ -19,6 +19,7 @@ var port = process.env.PORT || 8080;        // set our port
 var router = express.Router();              // get an instance of the express Router
 
 var coordData = [
+var coordData = [
   {
     "longitude": -0.12575671, //warehouse
     "latitude": 51.54418659 
@@ -707,6 +708,7 @@ var coordData = [
     "longitude": -0.1262742,
     "latitude": 51.5442538
  }
+];
 ];
 
 
@@ -1660,7 +1662,7 @@ router.get('/v3', function(req, res) {
 
 router.get('/generate-dataset', function(req, res) {
 
-    var numberOfStops = 200;
+    var numberOfStops = 180;
     var stops = [];
 
    for (var i = 0; i < numberOfStops; i++) {
@@ -1684,7 +1686,7 @@ router.get('/generate-dataset', function(req, res) {
     // Confinments:
     // 51.6700544,-0.4329608,15
     // 51.3272216,0.1264832
-    
+
     function generateRandomLongitutdeInLondon() {
         var min = -0.4329608;
         var max = 0.1264832;
